@@ -13,3 +13,148 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum Role {
+  MENTOR
+  MENTEE
+  ADMIN
+}
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String?
+  googleId  String?  @unique
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  otp           PasswordResetToken[]
+  mentorProfile MentorProfile?
+  menteeProfile MenteeProfile?
+
+  mentorSessions Session[] @relation("MentorSessions")
+  menteeSessions Session[] @relation("MenteeSessions")
+
+  givenReviews    Review[] @relation("GivenReviews")
+  receivedReviews Review[] @relation("ReceivedReviews")
+
+  refreshTokens RefreshToken[]
+  chatMessages  ChatMessage[]
+  payments      Payment[]
+  Feedback      Feedback[]
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  otp       String   @unique
+  createdAt DateTime @default(now())
+  expiredAt DateTime
+  used      Boolean  @default(false)
+}
+
+model MentorProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id])
+  skills           String[]
+  tag              String[]
+  bio              String?
+  experience       Int?
+  rating           Float?   @default(0)
+  freeSessionCount Int?     @default(0)
+}
+
+model MenteeProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  interests String[]
+}
+
+model Session {
+  id              String           @id @default(cuid())
+  mentor          User             @relation("MentorSessions", fields: [mentorId], references: [id])
+  mentorId        String
+  mentees         User[]           @relation("MenteeSessions")
+  startTime       DateTime
+  endTime         DateTime
+  videoUrl        String?
+  agenda          String?
+  isGroup         Boolean          @default(false)
+  feedback        Feedback?
+  recordingId     String?
+  createdAt       DateTime         @default(now())
+  videoRecordings VideoRecording[]
+  payments        Payment[]
+  
+}
+
+model Feedback {
+  id         String   @id @default(cuid()) // Unique ID
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId  String   @unique
+  notes      String 
+  createdAt  DateTime @default(now())
+  rating     Int? 
+  fromUser   User?    @relation(fields: [fromUserId], references: [id])
+  fromUserId String?
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  from      User     @relation("GivenReviews", fields: [fromId], references: [id])
+  fromId    String
+  to        User     @relation("ReceivedReviews", fields: [toId], references: [id])
+  toId      String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+}
+
+model VideoRecording {
+  id         String   @id @default(cuid())
+  url        String
+  session    Session? @relation(fields: [sessionId], references: [id])
+  sessionId  String?
+  transcoded Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime @default(now())
+  revoked   Boolean  @default(false)
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  sender    User     @relation(fields: [senderId], references: [id])
+  senderId  String
+  topic     String 
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  session   Session  @relation(fields: [sessionId], references: [id])
+  sessionId String
+  amount    Int
+  status    PaymentStatus
+  createdAt DateTime @default(now())
+}
+

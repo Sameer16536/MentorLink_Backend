@@ -55,3 +55,22 @@ MentorLink is a fullstack mentorship platform where learners can connect with ex
 | ElastiCache     | Redis instance for caching       |
 
 ---
+### Backend Features list:
+- Scalable Auth System , include Google Login too
+- Role Based Access Control
+- AWS s3 to store videos
+- FFMPEG for video transcoding and recording
+- AUTO Record feature
+- Rate limit the routes
+- filter the Mentors by Skill , Name , Tag , Experience , rating
+- Payment Integration(stripe)
+- Rating System
+- After Session feedback and review
+- Pre session forms for Agendas
+- Session Booking
+- 1:1 or 1:Many video call session SFU architecture
+- Email system via Kafka + Session events Notification
+- Refresh Token
+- Scalable Chat system [Global chat for interested topics]
+- Free session by Mentors
+- Prisma + Postgres
