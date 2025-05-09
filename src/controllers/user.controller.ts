@@ -1,6 +1,6 @@
 import rateLimit from "express-rate-limit";
 import { PrismaClient } from "../generated/prisma";
-import zod from "zod";
+import { Request, Response } from "express";
 import { NextFunction } from "express";
 
 
@@ -13,45 +13,41 @@ export const authRateLimiter = rateLimit({
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
 })
 
-const userInputValidation = zod.object({
-    email: zod.string().email(),
-    password: zod.string().min(8),
-    name: zod.string().min(3).max(50),
-})
 
 
-export  const registerUser = async(req:Request,res:Response,next:NextFunction)=>{
+
+export  const registerUser = async(req:Request,res:Response,next:NextFunction): Promise<void>=>{
 
 } 
 
 
-export  const loginUser = async()=>{
+export  const loginUser = async(req:Request,res:Response,next:NextFunction): Promise<void>=>{
 
 }
 
-export  const logoutUser = async()=>{
+export  const logoutUser =async(req:Request,res:Response,next:NextFunction): Promise<void>=>{
 
 }
 
-export  const forgotPassword = async()=>{
+export  const forgotPassword =async(req:Request,res:Response,next:NextFunction): Promise<void>=>{
 
 }
-export  const resetPassword = async()=>{
+export  const resetPassword = async(req:Request,res:Response,next:NextFunction): Promise<void>=>{
 
 }
-export  const verifyOtp = async()=>{
+export  const verifyOtp = async(req:Request,res:Response,next:NextFunction): Promise<void>=>{
 
 }
-export const getProfile = async()=>{
+export const getProfile = async(req:Request,res:Response,next:NextFunction): Promise<void>=>{
 
 }
-export const updateProfile = async()=>{
+export const updateProfile = async(req:Request,res:Response,next:NextFunction): Promise<void>=>{
 
 }
-export  const refreshToken = async()=>{
+export  const refreshToken =async(req:Request,res:Response,next:NextFunction): Promise<void>=>{
 
 }
-export  const deleteAccount = async()=>{
+export  const deleteAccount = async(req:Request,res:Response,next:NextFunction): Promise<void>=>{
 
 }
 
