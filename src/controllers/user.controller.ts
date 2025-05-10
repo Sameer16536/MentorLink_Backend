@@ -2,6 +2,7 @@ import rateLimit from "express-rate-limit";
 import { PrismaClient } from "../generated/prisma";
 import { Request, Response } from "express";
 import { NextFunction } from "express";
+import { userInputValidation } from "../types";
 
 
 const prisma = new PrismaClient()
@@ -17,8 +18,54 @@ export const authRateLimiter = rateLimit({
 
 
 export  const registerUser = async(req:Request,res:Response,next:NextFunction): Promise<void>=>{
+   try {
+     const validadteInput = userInputValidation.parse(req.body)
+    const {email,password,name,role} = validadteInput
 
-} 
+    const existingUser = await prisma.user.findUnique({
+        where:{
+            email
+        }
+    })
+    if (existingUser){
+        res.status(400).json({
+            message:"User already exists"
+        })
+        return
+    }
+    const user = await prisma.user.create({
+        data:{
+            email,
+            password,
+            name,
+            role
+        }
+    })
+    if(role === "MENTOR"){
+        await prisma.mentorProfile.create({
+            data:{
+                userId:user.id,
+                skills:[],
+                tag:[],
+                experience:0,
+                bio:"",
+                rating:0,
+            }
+        })
+    }
+    if(role === "MENTEE"){
+        await prisma.menteeProfile.create({
+            data:{
+                userId:user.id,
+                interests:[],
+            }
+        })
+    }
+   } catch (error) {
+    console.error(error)
+    console.log("Error in registerUser")
+   }
+    } 
 
 
 export  const loginUser = async(req:Request,res:Response,next:NextFunction): Promise<void>=>{
