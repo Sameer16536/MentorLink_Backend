@@ -3,6 +3,8 @@ import { PrismaClient } from "../generated/prisma";
 import { Request, Response } from "express";
 import { NextFunction } from "express";
 import { userInputValidation } from "../types";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 
 
 const prisma = new PrismaClient()
@@ -14,9 +16,19 @@ export const authRateLimiter = rateLimit({
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
 })
 
+const generateAccessToken  = (user:any)=>{
+    return jwt.sign({ id: user.id, email: user.email , name:user.name }, process.env.JWT_SECRET as string, {
+        expiresIn: "2h",
+    });
+}
 
+const generateRefreshToken  = (user:any)=>{
+    return jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET as string, {
+        expiresIn: "2h",
+    });
+}
 
-
+//Register the user with Role : MENTOR or MENTEE
 export  const registerUser = async(req:Request,res:Response,next:NextFunction): Promise<void>=>{
    try {
      const validadteInput = userInputValidation.parse(req.body)
@@ -28,15 +40,19 @@ export  const registerUser = async(req:Request,res:Response,next:NextFunction): 
         }
     })
     if (existingUser){
-        res.status(400).json({
+        res.status(409).json({
             message:"User already exists"
         })
         return
     }
+
+    //Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10)
+
     const user = await prisma.user.create({
         data:{
             email,
-            password,
+            password:hashedPassword,
             name,
             role
         }
