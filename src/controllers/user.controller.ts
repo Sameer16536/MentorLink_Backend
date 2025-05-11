@@ -48,8 +48,10 @@ export  const registerUser = async(req:Request,res:Response,next:NextFunction): 
 
     //Hash the password
     const hashedPassword = await bcrypt.hash(password, 10)
+    
 
-    const user = await prisma.user.create({
+ const {user, accessToken, refreshToken}  = await prisma.$transaction(async (tx) => {
+     const user = await tx.user.create({
         data:{
             email,
             password:hashedPassword,
@@ -57,8 +59,21 @@ export  const registerUser = async(req:Request,res:Response,next:NextFunction): 
             role
         }
     })
+    //Generate access and refresh token
+    const accessToken = generateAccessToken(user)
+    const refreshToken = generateRefreshToken(user)
+    await tx.refreshToken.create({
+        data:{
+            token:refreshToken,
+            userId:user.id,
+            revoked:false,
+            createdAt:new Date(),
+            expiresAt:new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        }
+    })
+
     if(role === "MENTOR"){
-        await prisma.mentorProfile.create({
+        await tx.mentorProfile.create({
             data:{
                 userId:user.id,
                 skills:[],
@@ -70,13 +85,34 @@ export  const registerUser = async(req:Request,res:Response,next:NextFunction): 
         })
     }
     if(role === "MENTEE"){
-        await prisma.menteeProfile.create({
+        await tx.menteeProfile.create({
             data:{
                 userId:user.id,
                 interests:[],
             }
         })
     }
+    return {user, accessToken, refreshToken}
+    
+})
+
+    //Status code 201 for new resource created
+    res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+    res.status(201).json({
+        message:"User created successfully",
+        user:{
+            id:user.id,
+            email:user.email,
+            name:user.name,
+            role:user.role,
+        }
+    })
+    
    } catch (error) {
     console.error(error)
     console.log("Error in registerUser")
