@@ -2,9 +2,10 @@ import rateLimit from "express-rate-limit";
 import { PrismaClient } from "../generated/prisma";
 import { Request, Response } from "express";
 import { NextFunction } from "express";
-import { userInputValidation } from "../types";
+import { loginInputValidation, userInputValidation } from "../types";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import { z } from "zod";
 
 
 const prisma = new PrismaClient()
@@ -110,18 +111,81 @@ export  const registerUser = async(req:Request,res:Response,next:NextFunction): 
             email:user.email,
             name:user.name,
             role:user.role,
-        }
+        },
+        accessToken
     })
     
    } catch (error) {
     console.error(error)
     console.log("Error in registerUser")
+    if (error instanceof z.ZodError) {
+        res.status(400).json({
+            message: "Invalid input",
+            errors: error.errors,
+        });
+    } else {
+        res.status(500).json({
+            message: "Internal Server Error",
+        });
    }
     } 
-
+}
 
 export  const loginUser = async(req:Request,res:Response,next:NextFunction): Promise<void>=>{
+    try{
+        const validateInput = loginInputValidation.parse(req.body)
+        const {email,password} = validateInput
+        
+        //Check if user exists
+        const user = await prisma.user.findUnique({
+            where:{
+                email
+            }
+        })
 
+       if (!user || !user.password || !(await bcrypt.compare(password, user.password))) {
+            res.status(401).json({ message: "Invalid credentials" });
+             return
+        }
+
+
+        //Generate access and refresh token
+        const accessToken = generateAccessToken(user)
+        const refreshToken = generateRefreshToken(user)
+        await prisma.refreshToken.create({
+            data:{
+                token:refreshToken,
+                userId:user.id,
+                revoked:false,
+                createdAt:new Date(),
+                expiresAt:new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+            }
+        })
+
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+
+        res.status(200).json({
+            message:"User logged in successfully",
+            user:{
+                id:user.id,
+                email:user.email,
+                name:user.name,
+                role:user.role,
+            },
+            accessToken
+        })
+    }catch(error){
+        console.error(error)
+        console.log("Error in loginUser")
+        res.status(500).json({
+            message:"Internal Server Error"
+        })
+    }
 }
 
 export  const logoutUser =async(req:Request,res:Response,next:NextFunction): Promise<void>=>{
