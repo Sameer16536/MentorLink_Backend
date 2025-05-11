@@ -101,7 +101,7 @@ export  const registerUser = async(req:Request,res:Response,next:NextFunction): 
     res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "none",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
     res.status(201).json({
@@ -165,7 +165,7 @@ export  const loginUser = async(req:Request,res:Response,next:NextFunction): Pro
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
+            sameSite: "none",
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
 
@@ -189,7 +189,40 @@ export  const loginUser = async(req:Request,res:Response,next:NextFunction): Pro
 }
 
 export  const logoutUser =async(req:Request,res:Response,next:NextFunction): Promise<void>=>{
+    try{
+        const refreshToken = req.cookies.refreshToken
+        if (!refreshToken) {
+            res.status(401).json({ message: "No refresh token provided" });
+            return;
+        }
+        //Revoking the refresh token
+        await prisma.refreshToken.updateMany({
+            where: {
+                token: refreshToken,
+                revoked: false,
+            },
+            data: {
+                revoked: true,
+            },
+        })
+        
+        res.clearCookie("refreshToken", {
+            httpOnly: true, 
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "none",
+        });
 
+        res.status(200).json({
+            message:"User logged out successfully"
+        })
+    }
+    catch(error){
+        console.error(error)
+        console.log("Error in logoutUser")
+        res.status(500).json({
+            message:"Internal Server Error"
+        })
+    }
 }
 
 export  const forgotPassword =async(req:Request,res:Response,next:NextFunction): Promise<void>=>{
