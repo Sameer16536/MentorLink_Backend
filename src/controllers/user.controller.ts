@@ -18,7 +18,7 @@ export const authRateLimiter = rateLimit({
 })
 
 const generateAccessToken  = (user:any)=>{
-    return jwt.sign({ id: user.id, email: user.email , name:user.name }, process.env.JWT_SECRET as string, {
+    return jwt.sign({ id: user.id, email: user.email , name:user.name , role: user.role}, process.env.JWT_SECRET as string, {
         expiresIn: "2h",
     });
 }
