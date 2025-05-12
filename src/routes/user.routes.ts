@@ -1,5 +1,6 @@
 import express from 'express'
 import { forgotPassword, getProfile, loginUser, logoutUser, refreshToken, registerUser, resetPassword, updateProfile, verifyOtp } from '../controllers/user.controller'
+import { authMiddleware } from '../middlewares/auth.middleware'
 
 
 const router = express.Router()
@@ -13,8 +14,8 @@ router.post('/reset-password',resetPassword)
 router.post('/verify-otp',verifyOtp)
 
 //profile
-router.get('/profile',getProfile)
-router.put('/profile',updateProfile)
+router.get('/profile',authMiddleware  as any ,getProfile)
+router.put('/profile',authMiddleware as any,updateProfile)
 
 
 //token
