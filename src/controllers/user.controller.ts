@@ -146,7 +146,7 @@ export const registerUser = async (
   }
 };
 
-export const loginUser = async (
+export const loginUser = [authRateLimiter,async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -208,7 +208,7 @@ export const loginUser = async (
       message: "Internal Server Error",
     });
   }
-};
+}];
 
 export const logoutUser = async (
   req: Request,
@@ -254,17 +254,62 @@ export const forgotPassword = async (
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<void> => {};
+): Promise<void> => {
+
+  //validate email first
+  const {email} = req.body
+  const validateInput = z.object({
+    email: z.string().email(),
+  });
+  const parsedInput = validateInput.safeParse(req.body);
+  if (!parsedInput.success) {
+    res.status(400).json({
+      message: "Invalid email",
+      errors: parsedInput.error.flatten(),
+    });
+    return;
+  }
+  const { email: validatedEmail } = parsedInput.data;
+  //Check if user exists
+  const user = await prisma.user.findUnique({
+    where: {
+      email: validatedEmail,
+    },
+  });
+  if (!user) {
+    res.status(404).json({
+      message: "User not found",
+    });
+    return;
+  }
+//Generate 6 digit OTP
+// e.g., "763920"
+const otp = Math.floor(100000 + Math.random() * 900000).toString(); 
+
+//send OTP to user email
+// Function to send OTP to user's email
+
+
+
+};
+
+
 export const resetPassword = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {};
+
+
+
 export const verifyOtp = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {};
+
+
+
 export const getProfile = async (
   req: Request,
   res: Response,
@@ -397,8 +442,48 @@ export const refreshToken = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {};
+
 export const deleteAccount = async (
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<void> => {};
+): Promise<void> => {
+  try{
+    const userId = req.user?.userId
+
+    if (!userId) {
+      res.status(401).json({
+        message: "Unauthorized",
+      });
+      return;
+    }
+    const user = await prisma.user.findUnique({
+      where:{
+        id:userId
+      }
+    })
+    if(!user){
+      res.status(404).json({
+        message: "User not found",
+      });
+      return;
+    }
+
+    await prisma.user.delete({
+      where:{ 
+        id:userId
+      } 
+    })
+    res.status(200).json({
+      message: "User deleted successfully",
+    });
+
+
+  }catch(error){
+    console.error(error);
+    console.log("Error in deleteAccount");
+    res.status(500).json({
+      message: "Internal Server Error",
+    });
+  }
+};
