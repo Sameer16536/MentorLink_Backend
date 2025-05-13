@@ -11,6 +11,7 @@ import {
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { z } from "zod";
+import { sendOtpEmail } from "../utils/sendOtpEmail";
 
 const prisma = new PrismaClient();
 
@@ -287,9 +288,32 @@ export const forgotPassword = async (
 const otp = Math.floor(100000 + Math.random() * 900000).toString(); 
 
 //send OTP to user email
-// Function to send OTP to user's email
+sendOtpEmail({
+  to: validatedEmail,
+  otp,
+  name: user.name,})
 
+  //delete any previous OTPs
+  await prisma.passwordResetToken.deleteMany({
+    where: {
+      userId: user.id,
+      used:false
+    },
+  })
 
+  //saving OTP to database
+  await prisma.passwordResetToken.create({
+    data: { 
+      userId: user.id,
+      otp,
+      expiredAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      used: false,
+    },
+  });
+
+  res.status(200).json({
+  message: "OTP sent to your email. Valid for 10 minutes.",
+});
 
 };
 
@@ -306,7 +330,64 @@ export const verifyOtp = async (
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<void> => {};
+): Promise<void> => {
+  const { email, otp } = req.body;
+  const validateInput = z.object({  
+    email: z.string().email(),
+    otp: z.string().length(6),
+  });
+  const parsedInput = validateInput.safeParse(req.body);
+  if (!parsedInput.success) {
+    res.status(400).json({
+      message: "Invalid input",
+      errors: parsedInput.error.flatten(),
+    });
+    return;
+  }
+  const { email: validatedEmail, otp: validatedOtp } = parsedInput.data;
+  //Check if user exists
+  const user = await prisma.user.findUnique({
+    where: {
+      email: validatedEmail,
+    },
+  });
+  if (!user) {
+    res.status(404).json({
+      message: "User not found",
+    });
+    return;
+  }
+  //Check if OTP exists and is valid
+  const passwordResetToken = await prisma.passwordResetToken.findFirst({
+    where: {
+      userId: user.id,
+      otp: validatedOtp,
+      expiredAt: {
+        gte: new Date(),
+      },
+      used: false,
+    },
+  }); 
+  if (!passwordResetToken) {
+    res.status(400).json({
+      message: "Invalid or expired OTP",
+    });
+    return;
+  }
+  //Mark OTP as used
+  await prisma.passwordResetToken.update({
+    where: {
+      id: passwordResetToken.id,
+    },
+    data: {
+      used: true,
+    },
+  });
+  res.status(200).json({
+    message: "OTP verified successfully",   
+  }); 
+  
+};
 
 
 
