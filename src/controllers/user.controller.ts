@@ -8,7 +8,7 @@ import {
   mentorUpdateSchema,
   userInputValidation,
 } from "../types";
-import jwt from "jsonwebtoken";
+import jwt, { decode, JwtPayload } from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { z } from "zod";
 import { sendOtpEmail } from "../utils/sendOtpEmail";
@@ -682,7 +682,94 @@ export const refreshToken = async (
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<void> => {};
+): Promise<void> => {
+    try{
+      const refreshToken = req.cookies.refreshToken;
+      if (!refreshToken) {
+        res.status(401).json({ message: "No refresh token provided" });
+        return;
+      }
+      let decoded;
+      try{
+        decoded = jwt.verify(refreshToken, process.env.JWT_SECRET as string);
+      }catch(error){
+        res.status(401).json({ message: "Invalid refresh token" });
+        return;
+      }
+
+      const payload = decoded as JwtPayload & { userId: string };
+      const userId = payload.userId
+
+      const tokenDb = await prisma.refreshToken.findFirst({
+        where: {
+          token: refreshToken,
+          userId: userId,
+        },
+      });
+      if (!tokenDb) {
+        res.status(401).json({ message: "Invalid refresh token" });
+        return;
+      }
+
+      if (tokenDb.revoked) {
+        res.status(401).json({ message: "Refresh token revoked" });
+        return;
+      }
+      if (tokenDb.expiresAt < new Date()) {
+        res.status(401).json({ message: "Refresh token expired" });
+        return;
+      }
+
+      // need to pass the user  to the generateAccessToken function
+      const user = await prisma.user.findUnique({
+        where: {
+          id: userId,
+        },
+        include: {
+          menteeProfile: true,
+          mentorProfile: true,
+        },
+      });
+      //Generate new access and refresh token
+      const newAccessToken = generateAccessToken(user);
+      const newRefreshToken = generateRefreshToken(user);
+
+      //Rotate tokens
+      await prisma.refreshToken.delete({
+        where: {
+          token: refreshToken,
+        },
+      })
+      await prisma.refreshToken.create({
+        data: {
+          token: newRefreshToken,
+          userId,
+          revoked: false,
+          createdAt: new Date(),
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        },
+      });
+
+      //cookies
+      res.cookie("refreshToken", newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+      res.status(200).json({
+        message: "Access token refreshed successfully",
+        accessToken: newAccessToken,
+      });
+
+    }catch(error){
+      console.error(error);
+      console.log("Error in refreshToken");
+      res.status(500).json({
+        message: "Internal Server Error",
+      });
+    }
+};
 
 export const deleteAccount = async (
   req: Request,
