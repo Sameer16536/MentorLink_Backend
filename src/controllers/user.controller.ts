@@ -37,7 +37,7 @@ const generateRefreshToken = (user: any) => {
     { id: user.id, email: user.email },
     process.env.JWT_SECRET as string,
     {
-      expiresIn: "2h",
+      expiresIn: "7d",
     }
   );
 };
