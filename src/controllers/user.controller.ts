@@ -1,5 +1,5 @@
 import rateLimit from "express-rate-limit";
-import { PrismaClient } from "../generated/prisma";
+import { PrismaClient } from "@prisma/client";
 import { Request, Response } from "express";
 import { NextFunction } from "express";
 import {
@@ -317,16 +317,176 @@ sendOtpEmail({
 
 };
 
+export const requestPasswordResetOtp  =  async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+ // validate email first
+  const {email} = req.body
+    const validateInput = z.object({
+      email: z.string().email(),
+    });
+    const parsedInput = validateInput.safeParse(req.body);
+    if (!parsedInput.success) {
+      res.status(400).json({
+        message: "Invalid email",
+        errors: parsedInput.error.flatten(),
+      });
+      return;
+    }
+    const { email: validatedEmail } = parsedInput.data;
+    //Check if user exists
+    const user = await prisma.user.findUnique({
+      where: {
+        email: validatedEmail,
+      },
+    });
+    if (!user) {
+      res.status(404).json({
+        message: "User not found",
+      });
+      return;
+    }
+  //delete any previous OTPs
+  await prisma.passwordResetToken.deleteMany({
+    where: {
+      userId: user.id,
+      used:false
+    },
+  })
+  //Generate 6 digit OTP
+  // e.g., "763920"
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  //send OTP to user email
+  sendOtpEmail({
+    to: validatedEmail,
+    otp,
+    name: user.name,
+  });
+  const recentToken = await prisma.passwordResetToken.findFirst({
+  where: {
+    userId: user.id,
+    createdAt: {
+      gte: new Date(Date.now() - 1 * 60 * 1000), // within 1 minute
+    },
+  },
+});
+if (recentToken) {
+ res.status(429).json({ message: "Please wait a minute before requesting another OTP." });
+  return;
+}
+
+
+  //saving OTP to database
+  await prisma.passwordResetToken.create({
+    data: {
+      userId: user.id,
+      otp,
+      expiredAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      used: false,
+    },
+  });
+  res.status(200).json({
+    message: "OTP sent to your email. Valid for 10 minutes.",
+  });
+};
+
 
 export const resetPassword = async (
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<void> => {};
+): Promise<void> => {
+ const { email, otp, password } = req.body;
+  const validateInput = z.object({
+    email: z.string().email(),
+    otp: z.string().length(6),
+    password: z.string().min(8),
+  });
+  const parsedInput = validateInput.safeParse(req.body);
+  if (!parsedInput.success) {
+    res.status(400).json({
+      message: "Invalid input",
+      errors: parsedInput.error.flatten(),
+    });
+    return;
+  }
+  const { email: validatedEmail, otp: validatedOtp, password: validatedPassword } = parsedInput.data;
+  //Check if user exists
+  const user = await prisma.user.findUnique({
+    where: {
+      email: validatedEmail,
+    },
+  });
+  if (!user) {
+    res.status(404).json({
+      message: "User not found",
+    });
+    return;
+  }
+  //Check if OTP exists and is valid
+  const passwordResetToken = await prisma.passwordResetToken.findFirst({
+    where: {
+      userId: user.id,
+      otp: validatedOtp,
+      expiredAt: {
+        gte: new Date(),
+      },
+      used: false,
+    },
+  });
+  if (!passwordResetToken) {
+    res.status(400).json({
+      message: "Invalid or expired OTP",
+    });
+    return;
+  }
+  // Null check
+    if (!user.password) {
+    res.status(400).json({
+      message: "User does not have a password set",
+    });
+    return;
+  }
+  //Check if password is same as old password
+
+  const isSamePassword = await bcrypt.compare(validatedPassword, user.password);
+  if (isSamePassword) {
+    res.status(400).json({
+      message: "New password cannot be same as old password",
+    });
+    return;
+  }
+
+  //Hash the new password
+  const hashedPassword = await bcrypt.hash(validatedPassword, 10);
+  //Update the user password
+  await prisma.user.update({
+    where: {
+      id: user.id,
+    },
+    data: {
+      password: hashedPassword,
+    },
+  });
+  //Mark OTP as used
+  await prisma.passwordResetToken.update({
+    where: {
+      id: passwordResetToken.id,
+    },
+    data: {
+      used: true,
+    },
+  });
+  res.status(200).json({
+    message: "Password reset successfully",
+  });
+};
 
 
 
-export const verifyOtp = async (
+export const verifyOtp = [authRateLimiter,async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -387,7 +547,7 @@ export const verifyOtp = async (
     message: "OTP verified successfully",   
   }); 
   
-};
+}];
 
 
 
