@@ -71,6 +71,8 @@ model MentorProfile {
   experience       Int?
   rating           Float?   @default(0)
   freeSessionCount Int?     @default(0)
+  hourlyRate       Int?
+  isAvailable      Boolean  @default(false)
 }
 
 model MenteeProfile {
