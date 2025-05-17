@@ -565,7 +565,7 @@ export const getProfile = async (
     }
     const user = await prisma.user.findUnique({
       where: {
-        id: req.user.userId,
+        id: req.user.id,
       },
       include: {
         menteeProfile: true,
@@ -612,7 +612,7 @@ export const updateProfile = async (
     }
     const user = await prisma.user.findUnique({
       where: {
-        id: req.user.userId,
+        id: req.user.id,
       },
       include: {
         menteeProfile: true,
@@ -777,7 +777,7 @@ export const deleteAccount = async (
   next: NextFunction
 ): Promise<void> => {
   try{
-    const userId = req.user?.userId
+    const userId = req.user?.id
 
     if (!userId) {
       res.status(401).json({
