@@ -199,7 +199,7 @@ const s3Client  = new S3Client({
 })
 
 
-const getPresignedUrl = async (req: Request, res: Response, next: NextFunction) => {
+export const getPresignedUrl = async (req: Request, res: Response, next: NextFunction) => {
   try{
     const user = req.user
     if(!user || user.role !== "MENTOR"){
