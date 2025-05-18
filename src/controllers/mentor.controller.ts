@@ -1,6 +1,8 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { NextFunction, Request, Response } from "express";
-
+import { v4 as uuidv4, v4 } from "uuid";
+import { createPresignedPost } from  "@aws-sdk/s3-presigned-post";
+import { S3Client } from "@aws-sdk/client-s3";
 
 const prisma = new PrismaClient()
 
@@ -134,6 +136,96 @@ res.status(201).json({
   rating:avgRating
 })
   }catch(error){ 
+    console.log(error)
+     res.status(500).json({
+      message: "Internal server error",
+      error: error
+    })
+    return
+  }
+}
+
+
+const uploadProfilePicture = async (req: Request, res: Response, next: NextFunction) => {
+  try{
+    const {mentorId} = req.params
+    const {image} = req.body
+    const user = req.user
+    if(user?.role !== "MENTOR"){
+      res.status(403).json({
+        message: "Only mentor can upload profile picture"
+      })
+      return
+    }
+    // Check if the mentor exists
+    const mentor = await prisma.user.findUnique({
+      where: {
+        id: mentorId
+      },
+    include: {mentorProfile: true}
+    })
+    if(!mentor){
+      res.status(404).json({
+        message: "Mentor not found"
+      })
+      return
+    }
+    // Update the mentor's profile picture
+    const updatedMentor = await prisma.mentorProfile.update({
+      where:{
+        id:mentorId
+      },
+      data:{
+        imageProfileUrl:image
+      }
+
+    })
+  }catch(error){
+    console.log(error)
+     res.status(500).json({
+      message: "Internal server error",
+      error: error
+    })
+    return
+  }
+}
+
+const s3Client  = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
+  }
+})
+
+
+const getPresignedUrl = async (req: Request, res: Response, next: NextFunction) => {
+  try{
+    const user = req.user
+    if(!user || user.role !== "MENTOR"){
+      res.status(403).json({
+        message: "Only mentor can get presigned url"
+      })
+      return
+    }
+    const uniqueId = v4()
+    const fileKey = `profilepicture/${user.id}/${uniqueId}.jpg`
+
+    const {url,fields} =  await createPresignedPost(s3Client,{
+      Bucket: process.env.AWS_BUCKET_NAME!,
+      Key: fileKey,
+      Expires: 300, // 5 minutes
+      Conditions:[["content-length-range",0 , 5 * 1024 * 1024]], // 5MB
+    })
+
+    res.status(200).json({
+      msg:"Presigned URL generated successfully",
+      preSignedUrl:url,
+      fields,
+      fileKey
+    })
+  }
+  catch(error){
     console.log(error)
      res.status(500).json({
       message: "Internal server error",

@@ -69,6 +69,7 @@ model MentorProfile {
   tag              String[]
   bio              String?
   experience       Int?
+  imageProfileUrl String?
   rating           Float?   @default(0)
   freeSessionCount Int?     @default(0)
   hourlyRate       Int?
