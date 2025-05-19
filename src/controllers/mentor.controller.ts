@@ -209,7 +209,7 @@ export const getPresignedUrl = async (req: Request, res: Response, next: NextFun
       return
     }
     const uniqueId = v4()
-    const fileKey = `profilepicture/${user.id}/${uniqueId}.jpg`
+    const fileKey = `Images/${user.id}/${uniqueId}.jpg`
 
     const {url,fields} =  await createPresignedPost(s3Client,{
       Bucket: process.env.AWS_BUCKET_NAME!,
