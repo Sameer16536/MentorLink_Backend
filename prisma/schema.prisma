@@ -74,6 +74,7 @@ model MentorProfile {
   freeSessionCount Int?     @default(0)
   hourlyRate       Int?
   isAvailable      Boolean  @default(false)
+  stripeAccountId String?
 }
 
 model MenteeProfile {
