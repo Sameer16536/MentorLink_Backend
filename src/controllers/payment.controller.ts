@@ -140,11 +140,11 @@ export const createStripeOnboardingLink = async (
                     stripeAccountId: account.id,
                 },
             });
-        }
+        
 
         // Create an onboarding link
         const accountLink = await stripe.accountLinks.create({
-            account: user.id,
+            account: account.id,
             refresh_url: `${process.env.CLIENT_URL}/stripe/onboarding-failed`,
             return_url: `${process.env.CLIENT_URL}/dashboard`,
             type: "account_onboarding",
@@ -153,6 +153,7 @@ export const createStripeOnboardingLink = async (
             url: accountLink.url,
             message: "Stripe onboarding link created successfully",
         });
+    }
     } catch (error) {
         console.log(error);
         res.status(500).json({
