@@ -163,3 +163,44 @@ export const createStripeOnboardingLink = async (
         return;
     }
 };
+
+
+export const stripeWebhook = async(req:Request,res:Response,next:NextFunction)=>{
+    const signature = req.headers["stripe-signature"] as string
+    const webHookSecret = process.env.STRIPE_WEBHOOK_SECRET!
+    let event:Stripe.Event
+
+try{
+    event = stripe.webhooks.constructEvent(req.body,signature,webHookSecret)
+
+}catch(err){
+  console.error("Webhook signature verification failed:", err);
+    return res.status(400).send(`Webhook Error: ${err}`);
+}
+
+ if (event.type === "checkout.session.completed") {
+    const session = event.data.object as Stripe.Checkout.Session;
+
+    const mentorId = session.metadata?.mentorId;
+    const menteeId = session.metadata?.menteeId;
+    const sessionId = session.metadata?.sessionId;
+
+    try {
+      // Mark session as paid
+      await prisma.session.update({
+        where: { id: sessionId },
+        data: {
+          status: "PAID", // or your enum type
+          paymentStatus: "COMPLETED",
+          paidAt: new Date(),
+        },
+      });
+
+      console.log("✅ Session marked as paid");
+
+    } catch (error) {
+      console.error("Error marking session as paid:", error);
+    }
+}
+res.status(200).json({ received: true });
+}
