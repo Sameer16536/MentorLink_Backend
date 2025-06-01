@@ -268,3 +268,52 @@ export const stripeWebhook = async (
     }
   }
 };
+
+
+
+
+export const refundPayment  = async(req:Request, res:Response, next:NextFunction):Promise<void> => {
+  const { paymentId } = req.body;
+  const user = req.user
+  try{
+    const payment = await prisma.payment.findUnique({
+      where: {
+        id: paymentId,
+      },
+      include:{
+        session: true,
+      }
+    }); 
+    if(!payment || payment.userId !== user?.id){
+      res.status(404).json({
+        message: "Payment not found",
+      });
+      return;
+    }
+    if(payment.status !== 'COMPLETED' as any){
+      res.status(400).json({
+        message: "Payment is not completed so cannot be refunded",
+      });
+      return;
+    }
+    const refund = await stripe.refunds.create({
+        payment_intent: payment.stripeIntentId!,
+    })
+
+    await prisma.payment.update({
+        where: {
+          id: paymentId,
+        },
+        data: {
+          status: "REFUNDED",
+        },
+    });
+  }
+  catch(error){
+    console.error(error);
+    console.log("Error in refundPayment");
+    res.status(500).json({
+      message: "Internal Server Error",
+    });
+  }
+}
