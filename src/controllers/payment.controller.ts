@@ -10,13 +10,14 @@ export const createCheckoutSession = async (
     req: Request,
     res: Response,
     next: NextFunction
-) => {
+):Promise<void> => {
     try {
         const { mentorId, sessionId } = req.body;
         const user = req.user;
 
         if (!user || user.role !== "MENTEE") {
-            return res.status(403).json({ message: "Only mentees can pay" });
+             res.status(403).json({ message: "Only mentees can pay" });
+             return
         }
 
         //FInd the mentor
@@ -29,9 +30,10 @@ export const createCheckoutSession = async (
             },
         });
         if (!mentor || !mentor.hourlyRate || !mentor.stripeAccountId) {
-            return res
+             res
                 .status(404)
                 .json({ message: "Mentor not available for payment" });
+            return;
         }
 
         const platformfeePercentage = 0.1; //10%
@@ -71,6 +73,18 @@ export const createCheckoutSession = async (
                 sessionId: sessionId,
             },
         });
+        await prisma.payment.create({
+            data:{
+                userId: user.id,
+                sessionId: sessionId,
+                amount: totalAmount ,
+                platformFee: platformFee,
+                status: "PENDING",
+                method: "STRIPE",
+                stripeSessionId: session.id,
+                stripeIntentId: session.payment_intent?.toString() || "",
+            }
+        })
 
         res.json({
             url: session.url,
@@ -165,7 +179,7 @@ export const createStripeOnboardingLink = async (
 };
 
 
-export const stripeWebhook = async(req:Request,res:Response,next:NextFunction)=>{
+export const stripeWebhook = async(req:Request,res:Response,next:NextFunction):Promise<void>=>{
     const signature = req.headers["stripe-signature"] as string
     const webHookSecret = process.env.STRIPE_WEBHOOK_SECRET!
     let event:Stripe.Event
@@ -175,7 +189,8 @@ try{
 
 }catch(err){
   console.error("Webhook signature verification failed:", err);
-    return res.status(400).send(`Webhook Error: ${err}`);
+     res.status(400).send(`Webhook Error: ${err}`);
+     return
 }
 
  if (event.type === "checkout.session.completed") {
@@ -190,7 +205,7 @@ try{
       await prisma.session.update({
         where: { id: sessionId },
         data: {
-          status: "PAID", // or your enum type
+          status: "PAID", 
           paymentStatus: "COMPLETED",
           paidAt: new Date(),
         },
