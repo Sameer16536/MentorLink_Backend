@@ -146,7 +146,7 @@ res.status(201).json({
 }
 
 
-const uploadProfilePicture = async (req: Request, res: Response, next: NextFunction) => {
+export const uploadProfilePicture = async (req: Request, res: Response, next: NextFunction) => {
   try{
     const {mentorId} = req.params
     const {image} = req.body
