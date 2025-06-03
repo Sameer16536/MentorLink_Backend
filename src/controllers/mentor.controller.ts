@@ -261,3 +261,36 @@ export const setAvailability = async (req: Request, res: Response, next: NextFun
   });
 
 }
+
+export const getScheduledSessions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const user = req.user;
+  if (user?.role !== "MENTOR") {
+    res.status(403).json({
+      message: "You are not authorized to view scheduled sessions",
+    });
+    return;
+  }
+
+ const schedule = await prisma.mentorAvailability.findMany({
+  where: {
+    mentorId: user.id, 
+    startTime: {
+      gte: new Date(), 
+    },
+  },
+  orderBy: {
+    startTime: 'asc',
+  },
+  include:{
+    session: {
+      include: {
+        mentees:true
+      }
+    }
+  }
+ })
+  res.status(200).json({
+    message: "Scheduled sessions retrieved successfully",
+    schedule,
+  });
+}
