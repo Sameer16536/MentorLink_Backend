@@ -43,6 +43,7 @@ const generateRefreshToken = (user: any) => {
 };
 
 //Register the user with Role : MENTOR or MENTEE
+// API - "POST /user/register"
 export const registerUser = async (
   req: Request,
   res: Response,
@@ -147,6 +148,8 @@ export const registerUser = async (
   }
 };
 
+
+// API - "POST /user/login"
 export const loginUser = [authRateLimiter,async (
   req: Request,
   res: Response,
@@ -211,6 +214,8 @@ export const loginUser = [authRateLimiter,async (
   }
 }];
 
+
+// API - "POST /user/logout"
 export const logoutUser = async (
   req: Request,
   res: Response,
@@ -251,6 +256,7 @@ export const logoutUser = async (
   }
 };
 
+// API - "POST /user/forgot-password"
 export const forgotPassword = async (
   req: Request,
   res: Response,
@@ -317,6 +323,8 @@ sendOtpEmail({
 
 };
 
+
+// API - "POST /user/requestOtp"
 export const requestPasswordResetOtp  =  async (
   req: Request,
   res: Response,
@@ -393,6 +401,7 @@ if (recentToken) {
 };
 
 
+// API - "POST /user/reset-password"
 export const resetPassword = async (
   req: Request,
   res: Response,
@@ -485,7 +494,7 @@ export const resetPassword = async (
 };
 
 
-
+// API - "POST /user/verify-otp"
 export const verifyOtp = [authRateLimiter,async (
   req: Request,
   res: Response,
@@ -550,7 +559,7 @@ export const verifyOtp = [authRateLimiter,async (
 }];
 
 
-
+// API - "GET /user/profile"
 export const getProfile = async (
   req: Request,
   res: Response,
@@ -598,6 +607,8 @@ export const getProfile = async (
     });
   }
 };
+
+// API - "PUT /user/profile"
 export const updateProfile = async (
   req: Request,
   res: Response,
@@ -678,6 +689,8 @@ export const updateProfile = async (
   }
 };
 
+
+// API - "POST /user/refresh-token"
 export const refreshToken = async (
   req: Request,
   res: Response,
@@ -771,6 +784,8 @@ export const refreshToken = async (
     }
 };
 
+
+// API - "DELETE /user/delete-account"
 export const deleteAccount = async (
   req: Request,
   res: Response,

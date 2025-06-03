@@ -1,5 +1,5 @@
 import express from 'express'
-import { forgotPassword, getProfile, loginUser, logoutUser, refreshToken, registerUser, requestPasswordResetOtp, resetPassword, updateProfile, verifyOtp } from '../controllers/user.controller'
+import { deleteAccount, forgotPassword, getProfile, loginUser, logoutUser, refreshToken, registerUser, requestPasswordResetOtp, resetPassword, updateProfile, verifyOtp } from '../controllers/user.controller'
 import { authMiddleware } from '../middlewares/auth.middleware'
 
 
@@ -22,4 +22,6 @@ router.put('/profile',authMiddleware as any,updateProfile)
 //token
 router.post('refresh-token',refreshToken)
 
+
+router.delete('/delete-account', authMiddleware as any,deleteAccount)
 export default router
