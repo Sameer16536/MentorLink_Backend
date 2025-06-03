@@ -58,3 +58,27 @@ export const bookSession = async (
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const getAvailableSlots = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const { mentorId } = req.params;
+
+  const slots = await prisma.mentorAvailability.findMany({
+    where: {
+      mentorId: mentorId,
+      isBooked: false,
+      startTime: {
+        gte: new Date(), // Only get future slots
+      },
+    },
+    include: {
+      mentor: true,
+    },
+  });
+  res.status(200).json({
+    slots,
+  });
+};

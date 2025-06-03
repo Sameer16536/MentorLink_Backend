@@ -111,7 +111,6 @@ model MentorAvailability {
   id        String   @id @default(cuid())
   mentor    User     @relation(fields: [mentorId], references: [id])
   mentorId  String
-  day       Int
   startTime DateTime
   endTime   DateTime
   isBooked  Boolean  @default(false)

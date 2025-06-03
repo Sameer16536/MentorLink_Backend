@@ -234,3 +234,30 @@ export const getPresignedUrl = async (req: Request, res: Response, next: NextFun
     return
   }
 }
+
+//Mentor Availability
+
+export const setAvailability = async (req: Request, res: Response, next: NextFunction):Promise<void> => {
+  const user = req.user
+  const { startTime, endTime } = req.body;  
+  if (user?.role !== "MENTOR") {
+    res.status(403).json({
+      message: "You are not authorized to set availability",
+    });
+    return;
+  }
+
+  const availability = await prisma.mentorAvailability.create({
+    data: {
+      mentorId: user.id,
+      startTime: new Date(startTime),
+      endTime: new Date(endTime),
+      isBooked: false,
+    },
+  });
+  res.status(201).json({
+    message: "Availability set successfully",
+    availability,
+  });
+
+}
