@@ -46,10 +46,11 @@ model User {
   givenReviews    Review[] @relation("GivenReviews")
   receivedReviews Review[] @relation("ReceivedReviews")
 
-  refreshTokens RefreshToken[]
-  chatMessages  ChatMessage[]
-  payments      Payment[]
-  Feedback      Feedback[]
+  refreshTokens      RefreshToken[]
+  chatMessages       ChatMessage[]
+  payments           Payment[]
+  Feedback           Feedback[]
+  MentorAvailability MentorAvailability[]
 }
 
 model PasswordResetToken {
@@ -70,12 +71,12 @@ model MentorProfile {
   tag              String[]
   bio              String?
   experience       Int?
-  imageProfileUrl String?
+  imageProfileUrl  String?
   rating           Float?   @default(0)
   freeSessionCount Int?     @default(0)
   hourlyRate       Int?
   isAvailable      Boolean  @default(false)
-  stripeAccountId String?
+  stripeAccountId  String?
 }
 
 model MenteeProfile {
@@ -86,25 +87,38 @@ model MenteeProfile {
 }
 
 model Session {
-  id              String           @id @default(cuid())
-  mentor          User             @relation("MentorSessions", fields: [mentorId], references: [id])
-  mentorId        String
-  mentees         User[]           @relation("MenteeSessions")
-  startTime       DateTime
-  endTime         DateTime
-  videoUrl        String?
-  agenda          String?
-  isGroup         Boolean          @default(false)
-  feedback        Feedback?
-  recordingId     String?
-  createdAt       DateTime         @default(now())
-  videoRecordings VideoRecording[]
-  payments        Payment[]
-  status          String           @default("PENDING") 
-  paymentStatus   String           @default("UNPAID") 
-  paidAt          DateTime?                        
+  id                 String               @id @default(cuid())
+  mentor             User                 @relation("MentorSessions", fields: [mentorId], references: [id])
+  mentorId           String
+  mentees            User[]               @relation("MenteeSessions")
+  startTime          DateTime
+  endTime            DateTime
+  videoUrl           String?
+  agenda             String?
+  isGroup            Boolean              @default(false)
+  feedback           Feedback?
+  recordingId        String?
+  createdAt          DateTime             @default(now())
+  videoRecordings    VideoRecording[]
+  payments           Payment[]
+  status             String               @default("PENDING")
+  paymentStatus      String               @default("UNPAID")
+  paidAt             DateTime?
+  MentorAvailability MentorAvailability[]
 }
 
+model MentorAvailability {
+  id        String   @id @default(cuid())
+  mentor    User     @relation(fields: [mentorId], references: [id])
+  mentorId  String
+  day       Int
+  startTime DateTime
+  endTime   DateTime
+  isBooked  Boolean  @default(false)
+  session   Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String?
+  createdAt DateTime @default(now())
+}
 
 model Feedback {
   id         String   @id @default(cuid()) // Unique ID
@@ -156,20 +170,19 @@ model ChatMessage {
   createdAt DateTime @default(now())
 }
 
-
 model Payment {
-  id              String        @id @default(cuid())
-  user            User          @relation(fields: [userId], references: [id]) // Mentee who paid
-  userId          String
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id]) // Mentee who paid
+  userId String
 
-  session         Session       @relation(fields: [sessionId], references: [id])
-  sessionId       String
+  session   Session @relation(fields: [sessionId], references: [id])
+  sessionId String
 
-  amount          Int           
-  platformFee     Int           
+  amount          Int
+  platformFee     Int
   status          PaymentStatus
-  method          String?       
-  stripeSessionId String?       
-  stripeIntentId  String?      
+  method          String?
+  stripeSessionId String?
+  stripeIntentId  String?
   createdAt       DateTime      @default(now())
 }
