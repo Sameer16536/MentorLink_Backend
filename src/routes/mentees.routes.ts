@@ -7,4 +7,6 @@ const router = express.Router();
 
 
 router.post("/book-session", authMiddleware as any, bookSession);
-router.get('/available-slots', authMiddleware as any , getAvailableSlots)
+router.get('/available-slots/:mentorId', authMiddleware as any , getAvailableSlots)
+
+export default router;

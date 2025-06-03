@@ -3,6 +3,8 @@ import { NextFunction, Request, Response } from "express";
 
 const prisma = new PrismaClient();
 
+//API - "/mentees/book-session"
+// Method - POST
 export const bookSession = async (
   req: Request,
   res: Response,
@@ -59,6 +61,8 @@ export const bookSession = async (
   }
 };
 
+//API - "/mentees/available-slots/:mentorId"
+// Method - GET
 export const getAvailableSlots = async (
   req: Request,
   res: Response,

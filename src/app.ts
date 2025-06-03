@@ -3,6 +3,8 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import userRouter from "./routes/user.routes"
 import mentorRouter from "./routes/mentor.routes"
+import paymentRouter from "./routes/payment.routes"
+import menteesRouter from "./routes/mentees.routes"
 import helmet from "helmet";
 
 const app = express();
@@ -27,5 +29,8 @@ app.use(cookieParser())
 
 app.use("/user",userRouter)
 app.use("/mentor",mentorRouter)
+app.use("/payment",paymentRouter)
+app.use("/mentees",menteesRouter)
+
 
 export default app;

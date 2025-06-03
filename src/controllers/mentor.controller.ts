@@ -6,7 +6,7 @@ import { S3Client } from "@aws-sdk/client-s3";
 
 const prisma = new PrismaClient()
 
-
+//API - "GET /mentor/search-mentors?skills=JavaScript,NodeJS&tags=Backend&minExperience=2&available=true&rating=4.5&name=John"
 export const searchMentors = async(req:Request,res:Response,next:NextFunction)=>{
     const {skills,tags,minExperience,available,rating,name}  = req.query
 
@@ -64,7 +64,7 @@ export const searchMentors = async(req:Request,res:Response,next:NextFunction)=>
 
 }
 
-
+// API - "POST /mentor/:mentorId/review"
 export const submitReview = async(req:Request,res:Response,next:NextFunction)=>{
   try{
     const {mentorId} = req.params
@@ -145,7 +145,7 @@ res.status(201).json({
   }
 }
 
-
+// API - "POST /mentor/:mentorId/upload-profile-picture"
 export const uploadProfilePicture = async (req: Request, res: Response, next: NextFunction) => {
   try{
     const {mentorId} = req.params
@@ -199,6 +199,7 @@ const s3Client  = new S3Client({
 })
 
 
+// API - "GET /mentor/presigned-url"
 export const getPresignedUrl = async (req: Request, res: Response, next: NextFunction) => {
   try{
     const user = req.user
@@ -236,7 +237,7 @@ export const getPresignedUrl = async (req: Request, res: Response, next: NextFun
 }
 
 //Mentor Availability
-
+//API - "POST /mentor/setAvailability"
 export const setAvailability = async (req: Request, res: Response, next: NextFunction):Promise<void> => {
   const user = req.user
   const { startTime, endTime } = req.body;  

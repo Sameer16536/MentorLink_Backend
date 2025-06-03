@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
 
+// API - "POST /payment/create-checkout-session"
 export const createCheckoutSession = async (
   req: Request,
   res: Response,
@@ -98,6 +99,8 @@ export const createCheckoutSession = async (
   }
 };
 
+
+// API - "POST /payment/create-stripe-onboarding-link"
 export const createStripeOnboardingLink = async (
   req: Request,
   res: Response,
@@ -175,6 +178,8 @@ export const createStripeOnboardingLink = async (
   }
 };
 
+
+// API - "POST /payment/webhook"
 export const stripeWebhook = async (
   req: Request,
   res: Response,
@@ -272,6 +277,7 @@ export const stripeWebhook = async (
 
 
 
+// API - "POST /payment/refund"
 export const refundPayment  = async(req:Request, res:Response, next:NextFunction):Promise<void> => {
   const { paymentId } = req.body;
   const user = req.user
