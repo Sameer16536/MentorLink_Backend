@@ -23,9 +23,11 @@
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
+    "mediasoup": "^3.16.0",
     "nodemailer": "^7.0.3",
     "stripe": "^18.1.0",
     "uuid": "^11.1.0",
+    "ws": "^8.18.2",
     "xss-clean": "^0.1.4",
     "zod": "^3.24.4"
   },
@@ -36,6 +38,7 @@
     "@types/express": "^5.0.1",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/nodemailer": "^6.4.17",
+    "@types/ws": "^8.18.1",
     "prisma": "^6.7.0"
   }
 }

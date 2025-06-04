@@ -1,5 +1,6 @@
 import app from "./app";
 import {configDotenv} from "dotenv"
+import { startServer } from "./webrtc-server/mediasoup-server";
 
 
 configDotenv();
@@ -7,9 +8,10 @@ configDotenv();
 const PORT = process.env.PORT || 3000;
 
 
-const server = app.listen(PORT, () => {
+ app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 })
 
 
-
+//SFU server
+startServer()
