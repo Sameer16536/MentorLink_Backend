@@ -1,6 +1,6 @@
 import mediasoup from "mediasoup"
 
-class Peer{
+export class Peer{
   id: string;
   transports = new Map<string,mediasoup.types.WebRtcTransport>()
   producers = new Map<string,mediasoup.types.Producer>()
