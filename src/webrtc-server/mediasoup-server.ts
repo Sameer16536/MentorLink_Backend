@@ -1,6 +1,8 @@
 import { createServer } from "http";
 import { WebSocketServer } from "ws";
 import mediasoup from "mediasoup";
+import { Room } from "./websocket/room";
+import { Peer } from "./websocket/peer";
 
 const PORT = 4000;
 const httpServer = createServer();
@@ -10,6 +12,17 @@ const wss = new WebSocketServer({ server: httpServer });
 let worker,
   router: mediasoup.types.Router<mediasoup.types.AppData>,
   transportPairs: { [key: string]: mediasoup.types.WebRtcTransport } = {};
+
+const rooms: Map<string, Room> = new Map();
+
+const getOrCreateRoom = (roomId: string): Room => {
+  let room = rooms.get(roomId);
+  if (!room) {
+    room = new Room(roomId, router);
+    rooms.set(roomId, room);
+  }
+  return room;
+};
 
 const startMediaSoup = async () => {
   worker = await mediasoup.createWorker({
@@ -43,11 +56,34 @@ wss.on("connection", async (socket) => {
   const id = crypto.randomUUID();
   console.log(`New client connected: ${id}`);
 
+  //Client sends roomId to join in first messsage
+  let currentRoom: Room | null = null;
+  let currentPeer: Peer | null = null;
+
   socket.on("message", async (message) => {
-    const data = JSON.parse(message.toString());
+    const msg = JSON.parse(message.toString());
+    const { action, data } = msg;
     console.log(`Received message from ${id}:`, data);
 
-    switch (data.action) {
+    switch (action) {
+      case "joinRoom": {
+        const { roomId, isMentor } = data;
+        currentRoom = getOrCreateRoom(roomId);
+        currentPeer = new Peer(id);
+        currentRoom.addPeer(currentPeer);
+
+        socket.send(
+          JSON.stringify({
+            action: "joinedRoom",
+            data: {
+              roomId: currentRoom.id,
+              peerId: currentPeer.id,
+            },
+          })
+        );
+        break;
+      }
+
       case "getRTPCapabilities": {
         socket.send(
           JSON.stringify({
@@ -60,6 +96,7 @@ wss.on("connection", async (socket) => {
 
       case "createWebRtcTransport": {
         const transport = await createTransport();
+        currentPeer?.addTransport(transport);
         transportPairs[id] = transport;
         socket.send(
           JSON.stringify({
@@ -77,51 +114,79 @@ wss.on("connection", async (socket) => {
 
       case "connectTransport": {
         const { dtlsParameters } = data.data;
-        const transport = transportPairs[id];
-        await transport.connect({ dtlsParameters });
+        const transport = currentPeer?.getTransport(data.transportId);
+        await transport?.connect({ dtlsParameters: data.dtlsParameters });
         socket.send(JSON.stringify({ action: "connected" }));
         break;
       }
 
       case "produce": {
-        const { kind, rtpParameters } = data.data;
-        const producer = await transportPairs[id].produce({
-          kind,
-          rtpParameters,
+        const transport = currentPeer?.getTransport(data.transportId);
+        const producer = await transport?.produce({
+          kind: data.kind,
+          rtpParameters: data.rtpParameters,
+          appData: { isMentor: data.isMentor },
         });
+        currentPeer?.addProducers(producer!);
         socket.send(
           JSON.stringify({
             action: "produced",
-            data: { id: producer.id },
+            data: { id: producer?.id },
           })
         );
         break;
       }
 
       case "consume": {
-        const { producerId, rtpCapabilities } = data.data;
-        if (!router.canConsume({ producerId, rtpCapabilities })) {
-          console.error("Cannot Consume");
-          return;
-        }
-        const consumer = await transportPairs[id].consume({
-          producerId,
-          rtpCapabilities,
-          paused: false,
-        });
+        const consumerTransport = currentPeer?.getTransport(data.transportId);
+        const producers = currentRoom?.getProducersExcluding(id) || [];
 
-        socket.send(
-          JSON.stringify({
-            action: "consumed",
-            data: {
-              id: consumer.id,
-              kind: consumer.kind,
-              rtpParameters: consumer.rtpParameters,
-            },
-          })
-        );
+        for (const producer of producers) {
+          if (
+            router.canConsume({
+              producerId: producer.id,
+              rtpCapabilities: data.rtpCapabilities,
+            })
+          ) {
+            const consumer = await consumerTransport?.consume({
+              producerId: producer.id,
+              rtpCapabilities: data.rtpCapabilities,
+              paused: false,
+            });
+            currentPeer?.addConsumer(consumer!);
+
+            socket.send(
+              JSON.stringify({
+                action: "consumed",
+                data: {
+                  id: consumer?.id,
+                  producerId: producer.id,
+                  kind: consumer?.kind,
+                  rtpParameters: consumer?.rtpParameters,
+                  type: consumer?.type,
+                },
+              })
+            );
+            break;
+          }
+        }
+      }
+
+      case "leaveRoom": {
+        if (currentRoom && currentPeer) {
+          currentRoom.removePeer(currentPeer.id);
+          socket.send(JSON.stringify({ action: "leftRoom" }));
+          currentRoom = null;
+          currentPeer = null;
+        }
         break;
       }
+    }
+  });
+
+  socket.on("close", () => {
+    if (currentRoom && currentPeer) {
+      currentRoom.removePeer(currentPeer.id);
     }
   });
 });
@@ -149,5 +214,3 @@ export const startServer = async () => {
     console.log(`🚀 SFU Server listening on ws://localhost:${PORT}`);
   });
 };
-
-

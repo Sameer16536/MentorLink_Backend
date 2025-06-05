@@ -23,6 +23,9 @@ export class Room {
   removePeer(id: string) {
     const peer = this.getPeer(id);
     if (peer) {
+      peer.transports.forEach((t) => t.close());
+      peer.producers.forEach((p) => p.close());
+      peer.consumers.forEach((c) => c.close());
       this.peers.delete(id);
     }
   }
@@ -42,5 +45,26 @@ export class Room {
       }
     }
     return null;
+  }
+
+  closeRoom() {
+    this.router.close();
+  }
+
+  getAllProducers() {
+    const producers: mediasoup.types.Producer[] = [];
+    for (const peer of this.peers.values()) {
+      producers.push(...peer.producers.values());
+    }
+    return producers;
+  }
+  getProducersExcluding(peerId: string) {
+    const producers: mediasoup.types.Producer[] = [];
+    for (const peer of this.peers.values()) {
+      if (peer.id !== peerId) {
+        producers.push(...peer.producers.values());
+      }
+    }
+    return producers;
   }
 }
