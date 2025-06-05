@@ -18,7 +18,7 @@ export class Peer{
     return this.transports.get(id)
   }
 
-  addProducers(producer:mediasoup.types.Producer){
+  addProducer(producer:mediasoup.types.Producer){
     this.producers.set(producer.id,producer)
   }
 

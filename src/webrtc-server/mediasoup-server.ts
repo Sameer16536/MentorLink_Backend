@@ -9,9 +9,7 @@ const httpServer = createServer();
 
 const wss = new WebSocketServer({ server: httpServer });
 
-let worker,
-  router: mediasoup.types.Router<mediasoup.types.AppData>,
-  transportPairs: { [key: string]: mediasoup.types.WebRtcTransport } = {};
+let worker, router: mediasoup.types.Router<mediasoup.types.AppData>;
 
 const rooms: Map<string, Room> = new Map();
 
@@ -97,7 +95,6 @@ wss.on("connection", async (socket) => {
       case "createWebRtcTransport": {
         const transport = await createTransport();
         currentPeer?.addTransport(transport);
-        transportPairs[id] = transport;
         socket.send(
           JSON.stringify({
             action: "transportCreated",
@@ -113,9 +110,9 @@ wss.on("connection", async (socket) => {
       }
 
       case "connectTransport": {
-        const { dtlsParameters } = data.data;
-        const transport = currentPeer?.getTransport(data.transportId);
-        await transport?.connect({ dtlsParameters: data.dtlsParameters });
+        const { dtlsParameters, transportId } = data;
+        const transport = currentPeer?.getTransport(transportId);
+        await transport?.connect({ dtlsParameters });
         socket.send(JSON.stringify({ action: "connected" }));
         break;
       }
@@ -127,13 +124,19 @@ wss.on("connection", async (socket) => {
           rtpParameters: data.rtpParameters,
           appData: { isMentor: data.isMentor },
         });
-        currentPeer?.addProducers(producer!);
-        socket.send(
-          JSON.stringify({
-            action: "produced",
-            data: { id: producer?.id },
-          })
-        );
+        if (producer) {
+          currentPeer?.addProducer(producer);
+          socket.send(
+            JSON.stringify({
+              action: "produced",
+              data: { id: producer.id },
+            })
+          );
+        } else {
+          socket.send(
+            JSON.stringify({ action: "error", message: "Failed to produce" })
+          );
+        }
         break;
       }
 
@@ -187,6 +190,9 @@ wss.on("connection", async (socket) => {
   socket.on("close", () => {
     if (currentRoom && currentPeer) {
       currentRoom.removePeer(currentPeer.id);
+      if (currentRoom.peers.size === 0) {
+        rooms.delete(currentRoom.id);
+      }
     }
   });
 });
