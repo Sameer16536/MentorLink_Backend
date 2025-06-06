@@ -1,6 +1,6 @@
 import { createServer } from "http";
 import { WebSocketServer } from "ws";
-import mediasoup from "mediasoup";
+import * as mediasoup from "mediasoup";
 import { Room } from "./websocket/room";
 import { Peer } from "./websocket/peer";
 

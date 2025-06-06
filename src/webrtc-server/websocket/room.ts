@@ -1,4 +1,4 @@
-import mediasoup from "mediasoup";
+import * as mediasoup from "mediasoup";
 import { Peer } from "./peer";
 
 export class Room {
