@@ -142,37 +142,57 @@ wss.on("connection", async (socket) => {
 
       case "consume": {
         const consumerTransport = currentPeer?.getTransport(data.transportId);
-        const producers = currentRoom?.getProducersExcluding(id) || [];
 
-        for (const producer of producers) {
-          if (
-            router.canConsume({
-              producerId: producer.id,
-              rtpCapabilities: data.rtpCapabilities,
-            })
-          ) {
-            const consumer = await consumerTransport?.consume({
-              producerId: producer.id,
-              rtpCapabilities: data.rtpCapabilities,
-              paused: false,
-            });
-            currentPeer?.addConsumer(consumer!);
+        // Find mentor’s producer
+        const mentorProducer = currentRoom
+          ?.getPeers()
+          .find((peer) =>
+            Array.from(peer.producers.values()).some(
+              (prod) => prod.appData?.isMentor
+            )
+          )
+          ?.producers.values()
+          .next().value;
+
+        if (
+          mentorProducer &&
+          router.canConsume({
+            producerId: mentorProducer.id,
+            rtpCapabilities: data.rtpCapabilities,
+          })
+        ) {
+          const consumer = await consumerTransport?.consume({
+            producerId: mentorProducer.id,
+            rtpCapabilities: data.rtpCapabilities,
+            paused: false,
+          });
+
+          if (consumer) {
+            currentPeer?.addConsumer(consumer);
 
             socket.send(
               JSON.stringify({
                 action: "consumed",
                 data: {
-                  id: consumer?.id,
-                  producerId: producer.id,
-                  kind: consumer?.kind,
-                  rtpParameters: consumer?.rtpParameters,
-                  type: consumer?.type,
+                  id: consumer.id,
+                  producerId: mentorProducer.id,
+                  kind: consumer.kind,
+                  rtpParameters: consumer.rtpParameters,
+                  type: consumer.type,
                 },
               })
             );
-            break;
           }
+        } else {
+          socket.send(
+            JSON.stringify({
+              action: "error",
+              message: "Mentor stream not found or can't be consumed",
+            })
+          );
         }
+
+        break;
       }
 
       case "leaveRoom": {
