@@ -543,15 +543,6 @@ export const verifyOtp = [authRateLimiter,async (
     });
     return;
   }
-  //Mark OTP as used
-  await prisma.passwordResetToken.update({
-    where: {
-      id: passwordResetToken.id,
-    },
-    data: {
-      used: true,
-    },
-  });
   res.status(200).json({
     message: "OTP verified successfully",   
   }); 
